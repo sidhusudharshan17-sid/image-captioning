@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Captioning with Attention</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-md py-6 px-8 mb-10">
+        <div class="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center">
+            <h1 class="text-3xl font-extrabold tracking-tight">Image Captioning with Attention</h1>
+            <p class="text-indigo-200 mt-2 sm:mt-0 text-sm">CNN Encoder + Bahdanau Attention LSTM Decoder</p>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-5xl mx-auto px-4 pb-16">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            <!-- Left Card: Upload & Controls -->
+            <div class="bg-white rounded-xl shadow-lg p-6 border border-slate-100 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 mb-4">Upload an Image</h2>
+                    <p class="text-slate-500 text-sm mb-6">Select or drag & drop an image to generate a descriptive caption and visualize word-by-word attention heatmaps.</p>
+
+                    <!-- Dropzone / File Input Form -->
+                    <form id="upload-form" class="space-y-4">
+                        <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-indigo-500 transition cursor-pointer relative" id="dropzone">
+                            <input type="file" id="image-input" name="image" accept="image/png, image/jpeg, image/jpg" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            <div class="flex flex-col items-center">
+                                <svg class="w-12 h-12 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <p class="text-sm font-medium text-slate-700" id="file-name-label">Drag & drop image here, or <span class="text-indigo-600 underline">browse</span></p>
+                                <p class="text-xs text-slate-400 mt-1">PNG, JPG, JPEG up to 10MB</p>
+                            </div>
+                        </div>
+
+                        <!-- Image Preview Box -->
+                        <div id="preview-container" class="hidden mt-4">
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Image Preview</p>
+                            <div class="rounded-lg overflow-hidden border border-slate-200 bg-slate-100 max-h-64 flex items-center justify-center">
+                                <img id="image-preview" src="#" alt="Preview" class="object-contain max-h-64 w-full">
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" id="submit-btn" disabled class="w-full mt-6 bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg shadow hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+                            <span id="btn-text">Generate Caption</span>
+                            <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Card: Results & Attention Heatmap -->
+            <div class="bg-white rounded-xl shadow-lg p-6 border border-slate-100 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 mb-4">Results & Attention Heatmap</h2>
+
+                    <!-- Initial Placeholder State -->
+                    <div id="placeholder-state" class="text-center py-16 text-slate-400">
+                        <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <p class="text-sm">Upload an image and click generate to see the caption and attention visualization.</p>
+                    </div>
+
+                    <!-- Results State -->
+                    <div id="results-container" class="hidden space-y-6">
+                        <!-- Caption Output -->
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Generated Caption</p>
+                            <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4">
+                                <p id="caption-output" class="text-indigo-900 font-medium text-lg capitalize"></p>
+                            </div>
+                        </div>
+
+                        <!-- Attention Visualization Plot -->
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Attention Heatmaps over Words</p>
+                            <div class="rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
+                                <img id="attention-image" src="#" alt="Attention Visualization" class="w-full object-contain">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="error-message" class="hidden mt-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-6 text-slate-400 text-xs">
+        <p>Image Captioning System with Visual Attention &bull; Powered by PyTorch & Flask</p>
+    </footer>
+
+    <!-- Frontend JavaScript -->
+    <script>
+        const imageInput = document.getElementById('image-input');
+        const fileNameLabel = document.getElementById('file-name-label');
+        const previewContainer = document.getElementById('preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const submitBtn = document.getElementById('submit-btn');
+        const btnText = document.getElementById('btn-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const uploadForm = document.getElementById('upload-form');
+        const placeholderState = document.getElementById('placeholder-state');
+        const resultsContainer = document.getElementById('results-container');
+        const captionOutput = document.getElementById('caption-output');
+        const attentionImage = document.getElementById('attention-image');
+        const errorMessage = document.getElementById('error-message');
+
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileNameLabel.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    imagePreview.src = event.target.result;
+                    previewContainer.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+                submitBtn.disabled = false;
+                errorMessage.classList.add('hidden');
+            }
+        });
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = imageInput.files[0];
+            if (!file) return;
+
+            // UI Loading State
+            submitBtn.disabled = true;
+            btnText.textContent = 'Generating...';
+            loadingSpinner.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    captionOutput.textContent = data.caption;
+                    attentionImage.src = data.attention_url + '?t=' + new Date().getTime(); // Prevent caching
+                    placeholderState.classList.add('hidden');
+                    resultsContainer.classList.remove('hidden');
+                } else {
+                    errorMessage.textContent = data.error || 'An error occurred during prediction.';
+                    errorMessage.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorMessage.textContent = 'Failed to connect to the server.';
+                errorMessage.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = 'Generate Caption';
+                loadingSpinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

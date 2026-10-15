@@ -1,0 +1,60 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Model Checkpoints (weights are >600MB and exceed GitHub 100MB limit)
+checkpoints/*
+!checkpoints/.gitkeep
+
+# Datasets
+data/*
+!data/.gitkeep
+
+# Flask temporary test uploads and generated heatmaps
+static/uploads/*
+!static/uploads/.gitkeep
+static/outputs/*
+!static/outputs/.gitkeep
+
+# Environment & Secret files
+.env
+.env.*
+!.env.example
+
+# IDEs & Tools
+.vscode/
+.idea/
+.claude/
+*.log
+.DS_Store
+Thumbs.db
